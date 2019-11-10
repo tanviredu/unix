@@ -1,0 +1,8 @@
+# download abacas on the work directory
+
+wget https://sourceforge.net/projects/abacas/files/abacas.1.3.1.pl/download
+
+# abacas command example:
+
+perl abacas.pl -r chr1.fasta -q aliivibrio-contigs.fa -p nucmer
+perl abacas.pl -r chr2.fasta -q aliivibrio-contigs.fa -p nucmer

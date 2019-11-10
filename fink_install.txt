@@ -1,0 +1,83 @@
+# fink install
+
+sudo xcode-select --install
+sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license
+cd ~/Downloads
+wget https://downloads.sourceforge.net/fink/fink-0.45.0.tar.gz
+tar -xvf fink-0.45.0.tar.gz
+cd fink-0.45.0
+./bootstrap
+
+# after installation close the terminal and open new terminal to set path
+
+/sw/bin/pathsetup.sh
+
+# install update. package description files and patches. rsync is generally preferable to git for most people.
+
+fink selfupdate-rsync
+fink index -f
+
+or,
+
+fink selfupdate-git
+fink index -f
+
+# for more info, go to http://www.finkproject.org/doc/index.php
+
+# setting path
+
+source /sw/bin/init.sh
+
+# installing tools with fink
+
+fink install nedit
+fink update-all
+
+# list
+
+fink list            - list all packages
+fink list bash       - check if bash is available and what version
+fink list "gnome*"   - list all packages that start with 'gnome'
+
+describe
+
+# This command displays a description of the package you name on the command line. Note that only a small part of the packages currently have a description.
+
+Aliases: desc, description, info
+
+fetch
+
+# Downloads the named packages, but does not install it. This command will download the tarballs even if they were downloaded before.
+
+fetch-all
+
+# Downloads all package source files. Like fetch, this downloads the tarballs even when they were downloaded before.
+
+fetch-missing
+
+# Downloads all package source files. This command will only download files that are not present on the system.
+
+build
+
+# Builds a package, but does not install it. As usual, the source tarballs are downloaded if they can not be found. The result of this command is an installable .deb package file, which you can quickly install later with the install command. This command will do nothing if the .deb already exists. Note that dependencies are still installed, not just built.
+
+rebuild
+
+# Builds a package (like the build command), but ignores and overwrites the existing .deb file. If the package is installed, the newly created .deb file will also be installed in the system via dpkg. Very useful during package development.
+
+reinstall
+
+# Same as install, but will install the package via dpkg even when it is already installed. You can use this when you accidentally deleted package files or changed configuration files and want to get the default settings back.
+
+configure
+
+# Reruns the Fink configuration process. This will let you change your mirror sites and proxy settings, among others.
+
+selfupdate
+
+# This command automates the process of upgrading to a new Fink release. It checks the Fink website to see if a new version is available. It then downloads the package descriptions and updates the core packages, including fink itself. This command can only upgrade to regular releases, but you can use it to upgrade from a CVS version to a later regular release. It will refuse to run if you have /sw/fink set up to get package descriptions directly from CVS.
+
+# Further Questions
+
+# If your questions are not answered by this document, read the FAQ at the Fink website: /faq/. If that still doesn't answer your questions, subscribe to the fink-users mailing list via /lists/fink-users.php and ask there.

@@ -1,0 +1,59 @@
+# Download latest Arch Linux .iso image from https://archlinux.org/download/
+
+# Boot the .iso file to USB or you can open it from Virtual Machine
+
+# Select "Boot Arch Linux (x86_64)" from boot manu
+
+# Do this steps on the root@archiso terminal
+
+fdisk /dev/sda
+n
+p
+1
+press enter
+press enter
+w
+mkfs.ext4 /dev/sda1
+mount /dev/sda1 /mnt
+pacstrap /mnt base base-devel
+
+# After Installation exit the terminal or reastert your device/ VM
+
+sudo systemctl poweroff
+or,
+sudo systemctl reboot
+
+# Login to user. Do this steps on terminal
+
+su (it will prompt for password. enter password and hit enter)
+pacman -Syy (it will update the system)
+
+# To install graphical user interface follow these steps.
+
+sudo pacman -S xorg-server xorg-xinit xorg-server-utils mesa-libgl xterm
+sudo pacman -S xf86-video-vesa
+sudo pacman -S xfce4 xfce4-goodies sddm
+sudo systemctl enable sddm.service
+
+# exit or restart the device/ VM
+
+sudo systemctl poweroff
+or,
+sudo systemctl reboot
+
+# now login on the graphical user interface
+
+# make easy and short alias
+
+alias reboot="sudo systemctl reboot"
+alias poweroff="sudo systemctl poweroff"
+alias halt="sudo systemctl halt"
+alias hibernate="sudo systemctl hibernate"
+alias suspend="sudo systemctl suspend"
+
+
+df #to see disk space
+du #to see disk usage
+
+cat /proc/cpuinfo #to see cpu info
+cat /proc/meminfo #to see memory info

@@ -1,0 +1,827 @@
+QUAST 5.0.2 manual
+QUAST stands for QUality ASsessment Tool. The tool evaluates genome assemblies by computing various metrics. This document provides instructions for the general QUAST tool for genome assemblies, MetaQUAST, the extension for metagenomic datasets, QUAST-LG, the extension for large genomes (e.g., mammalians), and Icarus, the interactive visualizer for these tools.
+
+You can find key project news and the latest version of the tool at http://quast.sf.net/. We also post all our news and related stuff on Twitter.
+
+QUAST default pipeline utilizes Minimap2. Functional elements prediction modules use GeneMarkS, GeneMark-ES, GlimmerHMM, Barrnap, and BUSCO. QUAST module for finding structural variations applies BWA, Sambamba, and GRIDSS. Also we use bedtools for calculating raw and physical read coverage, which is shown in Icarus contig alignment viewer. Icarus also can use Circos if it is installed in PATH. QUAST-LG introduced modules requiring KMC and Red. In addition, MetaQUAST uses MetaGeneMark, Krona tools, BLAST, and SILVA 16S rRNA database.
+Almost all tools listed above are built in into the QUAST package which is ready for use by academic, non-profit institutions and U.S. Government agencies. If you are not in one of these categories please refer to LICENSE section 'Third-party tools incorporated into QUAST' for guidelines on how to complete the licensing process.
+
+Version 5.0.2 of QUAST was released under GPL v2 on November 22, 2018. Note that some of build-in third-party tools are not under GPL v2. See LICENSE for details.
+
+Contents
+Installation
+Running QUAST
+For impatient people
+Input data
+Command line options
+Metagenomic assemblies
+QUAST output
+Metrics description
+Summary report
+Misassemblies report
+Unaligned report
+Plots descriptions
+MetaQUAST output
+Icarus output
+Adjusting QUAST reports and plots
+Citation
+Feedback and bug reports
+FAQ
+1. Installation
+QUAST can be run on Linux (64-bit and 32-bit with slightly limited functionality) or macOS (OS X).
+
+Its default pipeline requires:
+
+Python2 (2.5 or higher) or Python3 (3.3 or higher)
+GCC 4.7 or higher
+Perl 5.6.0 or higher
+GNU make and ar
+zlib development files
+In addition, QUAST submodules require:
+
+Time::HiRes perl module for GeneMark-ES (gene prediction in eukaryotes)
+Java 1.8 or later for GRIDSS (SV detection)
+R for GRIDSS (SV detection)
+All default requirements are usually pre installed on Linux. The only missing one could be zlib-dev. See their web-site for installation details for various platforms. In particular, it is pre installed on macOS and it can be simply installed on Ubuntu as:
+	sudo apt-get install zlib1g-dev
+MacOS, however, initially misses make, gcc and ar, so you will have to install Xcode to make them available.
+
+QUAST draws plots in two formats: HTML and PDF. If you need the PDF versions, make sure that you have installed Matplotlib Python library. We recommend to use Matplotlib version 1.1 or higher. QUAST is fully tested with Matplotlib v.1.3.1. Installation on Ubuntu:
+		sudo apt-get install -y pkg-config libfreetype6-dev libpng-dev python-matplotlib
+
+To download the QUAST source code tarball and extract it, type:
+		wget https://downloads.sourceforge.net/project/quast/quast-5.0.2.tar.gz
+		tar -xzf quast-5.0.2.tar.gz
+		cd quast-5.0.2
+
+QUAST automatically compiles all its sub-parts when needed (on the first use). Thus, installation is not required. However, if you want to precompile everything and add quast.py to your PATH, you may choose either:
+
+Basic installation (about 120 MB):
+
+		./setup.py install
+or
+Full installation (about 540 MB, additionally includes (1) tools for SV detection based on read pairs, which is used for more precise misassembly detection, and (2) tools/data for reference genome detection in metagenomic datasets):
+
+		./setup.py install_full
+The default installation location is /usr/local/bin/ for the executable scripts, and /usr/local/lib/ for the python modules and auxiliary files. If you are getting a permission error during the installation, consider running setup.py with sudo, or creating a virtual python environment and install into it. Alternatively, you may use old-style installation scripts (./install.sh or ./install_full.sh), which build QUAST package inplace.
+2. Running QUAST
+2.1 For impatient people
+
+Running QUAST on test data from the installation tarball (reference genome, gene annotations, and two assemblies of the first 10 kbp of E. coli):
+		./quast.py test_data/contigs_1.fasta \
+							 test_data/contigs_2.fasta \
+							 -r test_data/reference.fasta.gz \
+							 -g test_data/genes.gff
+View the summary of the evaluation results with the less utility:
+		less quast_results/latest/report.txt
+2.2 Input data
+The test_data directory contains examples of assemblies, reference genomes, gene and operon annotations, and raw reads files.
+
+Sequences
+The tool accepts assemblies and reference genomes in FASTA format. Files may be compressed with zip, gzip, or bzip2.
+A reference genome with multiple chromosomes can be provided as a single FASTA file with separate sequence for each chromosome inside.
+ 
+Reads
+QUAST accepts Illumina, PacBio, and Oxford Nanopore reads in FASTQ format (may be compressed) or in the aligned form in SAM/BAM formats.
+ 
+Genes and operons
+One can also specify files with gene and operon positions in the reference genome. QUAST will count fully and partially aligned regions, and output total values as well as cumulative plots.
+ 
+The following file formats are supported:
+
+GFF, versions 2 and 3;
+BED: sequence name, start position, end position, gene/operon id, optional fields;
+the format used by NCBI for genes ("Summary (text)");
+four tab-separated columns: sequence name, gene/operon id, start position, end position.
+Note that the sequence name has to fully match a name in the reference file.
+ 
+Coordinates are 1-based, i.e. the first nucleotide in the reference genome has position 1, not 0. If a start position is less than a corresponding end position, such gene or operon is located on the forward strand, and on the reverse-complement strand otherwise.
+2.3 Command line options
+
+QUAST runs from a command line as follows:
+		python quast.py [options] <contig_file(s)>
+Options:
+-o <output_dir>
+Output directory. The default value is quast_results/results_<date_time>.
+Also, quast_results/latest symlink is created.
+
+Note: QUAST reuses existing alignments if run repeatedly with the same output directory. Thus, you can efficiently reuse already computed results when running QUAST with different parameters, or adding more assemblies to the existing comparison.
+-r <path>
+Reference genome file. Optional. Many metrics can't be evaluated without a reference. If this is omitted, QUAST will only report the metrics that can be evaluated without a reference.
+--features (or -g) <path>
+File with genomic feature positions in the reference genome. See details about the file format in section 2.2.
+If you use GFF format and would like to count only a specific feature from it (e.g., only "CDS" or only "gene") you can specify this feature followed by a colon (":") as the filepath prefix (do not use spaces!). For example:
+--features CDS:~/data/my_genome_annotation.gff
+or
+--features gene:./test_data/genes.gff
+Otherwise, all features from the file will be considered.  
+If you do not have the annotated positions, you can make QUAST predict genes with --gene-finding.
+--min-contig (or -m) <int>
+Lower threshold for a contig length (in bp). Shorter contigs won't be taken into account (except for specific metrics, see section 3). The default value is 500.
+--threads (or -t) <int>
+Maximum number of threads. The default value is 25% of all available CPUs but not less than 1. If QUAST fails to determine the number of CPUs, maximum threads number is set to 4.
+
+Advanced options:
+--split-scaffolds (or -s)
+The assemblies are scaffolds (rather than contigs). QUAST will add split versions of assemblies to the comparison (named <assembly_name>_broken). Assemblies are split by continuous fragments of N's of length ≥ 10. If broken version is equal to the original assembly (i.e. nothing was split) it is not included in the comparison.
+--labels (or -l) <label,label...>
+Human-readable assembly names. Those names will be used in reports, plots and logs. For example:
+-l SPAdes,IDBA-UD
+If your labels include spaces, use quotes:
+-l SPAdes,"Assembly 2",Assembly3
+-l "SPAdes 2.5, SPAdes 2.4, IDBA-UD"
+-L
+Take assembly names from their parent directory names.
+--eukaryote (or -e)
+Genome is eukaryotic. Affects gene finding, conserved orthologs finding and contig alignment:
+For prokaryotes (which is default), GeneMarkS is used. For eukaryotes, GeneMark-ES is used.
+Barrnap will use eukaryotic database to predict ribosomal RNA genes.
+BUSCO will use eukaryotic database to find conserved orthologs.
+By default, QUAST assumes that a genome is circular and correctly processes its linear representation. This options indicates that the genome is not circular.
+--fungus
+Genome is fungal. Affects gene finding, conserved orthologs finding and contig alignment:
+For gene finding, GeneMark-ES is used with --fungus option.
+Barrnap will use eukaryotic database to predict ribosomal RNA genes.
+>BUSCO will use fungal database to find conserved orthologs.
+By default, QUAST assumes that a genome is circular and correctly processes its linear representation. This options indicates that the genome is not circular.
+--large
+Genome is large (typically > 100 Mbp). Use optimal parameters for evaluation of large genomes. Affects speed and accuracy. In particular, imposes --eukaryote --min-contig 3000 --min-alignment 500 --extensive-mis-size 7000 (can be overridden manually with the corresponding options). In addition, this mode tries to identify misassemblies caused by transposable elements and exclude them from the number of misassemblies. See Mikheenko et al., 2018 for more details.
+--k-mer-stats (or -k)
+Compute k-mer-based quality metrics, such as k-mer-based completeness, # k-mer-based misjoins. Recommended for large genomes (see also --large option). Affects performance, thus disabled by default.
+--k-mer-size <int>
+Size of k used in --k-mer-stats options. The default value is 101 bp. Use smaller values for genomes with high levels of heterozygosity. However, note that very small k-mer sizes may give irrelevant results for repeat-rich genomes.
+--circos
+Plot Circos version of Icarus contig alignment viewer. Note that Circos software is not embedded in QUAST, so if Circos is not installed on your machine (in the PATH environment variable) only Circos configuration files will be created.
+--gene-finding (or -f)
+Enables gene finding. Affects performance, thus disabled by default.
+ 
+By default, we assume that the genome is prokaryotic, and apply GeneMarkS for gene finding. If the genome is eukaryotic, use --eukaryote option to enable GeneMark-ES instead. If the genome is fungal, use --fungus option to run GeneMark-ES in a special mode for analyzing fungal genomes. If it is a metagenome (you are running metaquast.py), MetaGeneMark is used. You can also force MetaGeneMark predictions with --mgm option described below.  
+
+If a genomic feature file is provided with --features as well, both # genomic features (according to the provided feature positions and assembly mappings to the reference), and # predicted genes (according to the gene finding software) are reported. Note that operons are not predicted, but a file of known operon positions can be provided with -O.
+--mgm
+Force use of MetaGeneMark for gene finding (instead of the default finders: GeneMarkS or GeneMark-ES).  
+Note: if you are working with metagenome assemblies, we recommend to use metaquast.py instead of quast.py (it is in the same directory as quast.py).
+--glimmer
+Use GlimmerHMM for gene finding (instead of GeneMark family of tools). Note: you may skip --gene-finding option if --glimmer is specified.
+--gene-thresholds <int,int,...>
+Comma-separated list of thresholds (in bp) for gene lengths to find with a finding tool. The default value is 0,300,1500,3000. Note: this list is used only if --gene-finding or --glimmer option is specified.
+--rna-finding
+Enables ribosomal RNA gene finding. Disabled by default.
+ 
+By default, we assume that the genome is prokaryotic, and Barrnap uses the bacterial database for rRNA prediction. If the genome is eukaryotic (fungal), use --eukaryote (--fungus) option to force Barrnap to work with the eukaryotic (fungal) database.
+--conserved-genes-finding (or -b)
+Enables search for Universal Single-Copy Orthologs using BUSCO (only on Linux, only with Python 2.7 or Python 3). Disabled by default.
+ 
+By default, we assume that the genome is prokaryotic, and BUSCO uses the bacterial database of orthologs. If the genome is eukaryotic (fungal), use --eukaryote (--fungus) option to force BUSCO to work with the eukaryotic (fungal) database.
+--operons <path>
+File with operon positions in the reference genome. See details about the file format in section 2.2.
+--est-ref-size <int>
+Estimated reference genome size (in bp) for computing NGx statistics. This value will be used only if a reference genome file is not specified (see -r option).
+--contig-thresholds <int,int,...>
+Comma-separated list of contig length thresholds (in bp). Used in # contigs ≥ x and total length (≥ x) metrics (see section 3). The default value is 0,1000.
+--use-all-alignments (or -u)
+Compute genome fraction, # genomic features, # operons metrics in the manner used in QUAST v.1.*. By default, QUAST v.2.0 and higher filters out ambiguous and redundant alignments, keeping only one alignment per contig (or one set of non-overlapping or slightly overlapping alignments). This option makes QUAST count all alignments.
+--min-alignment (or -i) <int>
+Minimum length of alignment (in bp). Alignments shorter than this value will be filtered. Note that all alignments shorter than 65 bp will be filtered regardless of this threshold.
+--min-identity <float>
+Minimum IDY% considered as proper alignment. Alignments with IDY% worse than this value will be filtered. Default is 95.0 %. Note that all alignments with IDY% less than 80.0% will be filtered regardless of this threshold.
+--ambiguity-usage (or -a) <none|one|all>
+Way of processing equally good alignments of a contig (probably repeats):
+none	skip all such alignments;
+one	take only one (the very best one);
+all	use all alignments. Can cause a significant increase of # mismatches (repeats are almost always inexact due to accumulated SNPs, indels, etc.).
+The default value is one.
+The value all is useful for metagenomic assemblies where ambiguous alignments might represent homologous sequences of different strains. For that reason, --ambiguity-usage is set to all for the "combined reference" evaluation (see section 2.4). You may still modify this behaviour with --unique-mapping.
+--ambiguity-score <float>
+Score S for defining equally good alignments of a single contig (see --ambiguity-usage). All alignments are sorted by decreasing LEN × IDY% value. All alignments with LEN × IDY% less than S × best(LEN × IDY%) are discarded. S should be between 0.8 and 1.0. The default value is 0.99.
+--strict-NA
+Break contigs at every misassembly event (including local ones) to compute NAx and NGAx statistics. By default, QUAST breaks contigs only at extensive misassemblies (not local ones).
+--extensive-mis-size (or -x) <int>
+Lower threshold for the relocation size (gap or overlap size between left and right flanking sequence, see section 3.1.2 for details). Shorter relocations are considered as local misassemblies. It does not affect other types of extensive misassemblies (inversions and translocations). The default value is 1000 bp. Note that the threshold should be greater than maximum indel length which is 85 bp.
+--scaffold-gap-max-size <int>
+Max allowed scaffold gap length difference for detecting corresponding type of misassemblies (see section 3.1.2 for details). Longer inconsistencies are considered as relocations and thus, counted as extensive misassemblies. The default value is 10000 bp. Note that the threshold make sense only if it is greater than extensive misassembly size (see --extensive-mis-size, its default value is 1000 bp).
+--unaligned-part-size <int>
+Lower threshold for detecting partially unaligned contigs, see section 3.1.3 for details. The default value is 500 bp.
+--skip-unaligned-mis-contigs
+Do not distinguish contigs with more than 50% unaligned bases as a separate group of contigs. By default, QUAST does not count misassemblies in them. See # unaligned mis. contigs metric for more details.
+--fragmented
+Reference genome is fragmented (e.g. a scaffold reference). QUAST will try to detect misassemblies caused by the fragmentation and mark them fake (will be excluded from # misassemblies). Note: QUAST will not detect misassemblies caused by the linear representation of circular genome.
+--fragmented-max-indent <int>
+Mark translocation as fake if both alignments are located no further than N bases from the ends of the reference fragments. The value should be less than extensive misassembly size (see --extensive-mis-size, its default value is 1000 bp). Default value is 50. Note: requires --fragmented option.
+--upper-bound-assembly
+Simulate upper bound assembly based on the reference genome and a given set reads (mate-pairs or long reads, such as Pacbio SMRT/Oxford Nanopore, are REQUIRED). This assembly is added to the comparison and could be useful for estimating the upper bounds of completeness and contiguity that theoretically can be reached by assembly software from this particular set of reads. The concept is based on the fact that the reference genome cannot be completely reconstructed from raw reads due to long genomic repeats and low covered regions. See Mikheenko et al., 2018 for more details. Note: this option requires reads; if reads are provided, QUAST performs various types of time-consuming analysis (structural variations detection and read-based metrics computation); if you are not interested in this additional analysis and want to get only the upper bound assembly, you may consider adding --no-sv and --no-read-stats to your command line.
+--upper-bound-min-con <int>
+Minimal number of 'connecting reads' needed for joining upper bound contigs into a scaffold (see also --upper-bound-assembly). This is important for a realistic estimation of genome assembly fragmentation due to long repeats. The default values is 2 for mate-pairs and 1 for long reads (PacBio or Nanopore libraries).
+--est-insert-size <int>
+Paired-reads insert size used in the upper bound assembly construction (see also --upper-bound-assembly). It is used for detecting minimal repeat size that spans the upper bound assembly into contigs. By default, the value is automatically detected as the median insert size of provided paired-end reads. If no paired-end reads are provided, 255 is used as the default value.
+--plots-format <format>
+File format for plots. Supported formats: emf, eps, pdf, png, ps, raw, rgba, svg, svgz. The default format is PDF.
+--memory-efficient
+Use one thread, separately per each assembly and each chromosome. This may significantly reduce memory consumption for large genomes. Note: this option will significantly slow down the processing as well.
+--space-efficient
+Create only primary output items (reports, plots, quast.log, etc). All auxiliary files (.stdout, .stderr, etc) will not be created. This may significantly reduce disk space usage on large assemblies (more than 100k contigs). Note: Icarus viewers also will not be built because they became enormously large and slow in case of zillions of contigs, thus not applicable. Circos plot needs detailed information about all alignments, so it also will not be created.
+
+Reads options:
+Note: among other applications, reads are used for SV detection (experimental, please use it carefully until we finalize the feature; you can skip SV processing with --no-sv). The reads are aligned to reference genome using BWA, then GRIDSS SV calling tool is run on BWA output. Found SVs are used for classifying QUAST misassemblies into true ones and fake ones (caused by structural differences between reference sequence and sequenced organism). Fake misassemblies are excluded from # misassemblies and reported as # structural variations.
+
+For specifying multiple read files of the same format just use the corresponding option multiple times. For example:
+
+--pe1 lib1/R1.fq --pe2 lib1/R2.fq --pe1 lib2/R1.fq.gz --pe2 lib2/R2.fq.gz
+or
+--single lib1/unpaired_a.fq --single lib1/unpaired_b.fq --single lib2/unpaired.fastq
+Currently, the supported read types are Illumina unpaired, paired-end and mate-pair reads, PacBio SMRT, and Oxford Nanopore long reads. If paired reads are specified in separate files (e.g. using --mp1/--mp2), the number of reads in both files should be exactly the same. Moreover, the names of forward and reverse reads of the same pair should be exactly the same except trailing /1 and /2, respectively.
+
+--pe1 (or -1) <path>
+File with forward paired-end reads in FASTQ format (files compressed with gzip are allowed).
+--pe2 (or -2) <path>
+File with reverse paired-end reads in FASTQ format (files compressed with gzip are allowed).
+--pe12 (or --12) <path>
+File with interlaced forward and reverse paired-end reads in FASTQ format (files compressed with gzip are allowed).
+--mp1 <path>
+File with forward mate-pair reads in FASTQ format (files compressed with gzip are allowed).
+--mp2 <path>
+File with reverse mate-pair reads in FASTQ format (files compressed with gzip are allowed).
+--mp12 <path>
+File with interlaced forward and reverse mate-pair reads in FASTQ format (files compressed with gzip are allowed).
+--single <path>
+File with unpaired reads in FASTQ format (files compressed with gzip are allowed).
+--pacbio <path>
+File with PacBio SMRT reads in FASTQ format (files compressed with gzip are allowed).
+--nanopore <path>
+File with Oxford Nanopore reads in FASTQ format (files compressed with gzip are allowed).
+--ref-bam <path>
+File with alignments of both forward and reverse reads against the reference genome (in BAM format).
+--ref-sam <path>
+File with alignments of both forward and reverse reads against the reference genome (in SAM format).
+--bam <path1,path2,...>
+Comma-separated list of BAM alignment files obtained by aligning reads against the assemblies (use the same order as for files with assemblies; do not use spaces)
+--sam <path1,path2,...>
+Comma-separated list of SAM alignment files obtained by aligning reads against the assemblies (use the same order as for files with assemblies; do not use spaces)
+--sv-bedpe <path>
+Use specified file in BEDPE format as a list of structural variations (SV). This option disables SV detection based on reads. Examples of BEDPE files for various types of SV are in FAQ section, question Q8.
+
+Speedup options:
+--no-check
+Do not check and correct input FASTA files (both reference genome and assemblies). By default, QUAST corrects sequence names by replacing special characters (all symbols except latin letters, numbers, underscores, dots, and minus signs) with underscore ("_"). QUAST also checks and corrects sequences itself. Lowercase letters are changed to uppercase. Alternative nucleotide symbols (M, K, R, etc) are replaced with N. If non-ACGTN characters are present after this modifications the whole FASTA file is skipped from further processing.
+Caution: use this option at your own risk. Incorrect FASTA files may cause failing of third-party tools incorporated to QUAST, e.g. Minimap2, GeneMark, GlimmerHMM. This option is useful for running QUAST without -r and --gene-finding (no third-party tools will be run) or if you are absolutely sure that your FASTA files are correct.
+--no-plots
+Do not draw plots.
+--no-html
+Do not build HTML reports and Icarus viewers.
+--no-icarus
+Do not build Icarus viewers.
+--no-snps
+Do not report SNPs statistics. This may significantly reduce memory consumption on large genomes and speed up computation. However, all SNP-related metrics will not be reported (e.g. # mismatches per 100 kbp).
+--no-gc
+Do not compute GC% and do not produce GC-distribution plots (both in HTML report and in PDF).
+--no-sv
+Do not run structural variant calling and processing (make sense only if reads are specified).
+--no-gzip
+Do not compress large output files (files containing SNP information and predicted genes). This may speed up computation, but more disk space is required.
+--no-read-stats
+Do not align reads against assemblies and do not report the corresponding metrics. Reads still will be aligned against the reference genome and used for coverage analysis, upper bound assembly simulation, and structural variation detection.
+--fast
+A shortcut for using all of speedup options except --no-check.
+
+Other:
+--silent
+Do not print detailed information about each step in standard output. This option does not affect quast.log file.
+--test
+Run the tool on a data from the test_data folder and check correctness of the evaluation process. Output is saved in quast_test_output.
+--test-sv
+Run the tool on a data from the test_data folder using the reads for SV detection. The tool will compile or download the required programs (BEDtools, BWA, and GRIDSS Structural Variant Caller).
+--help (or -h)
+Print help and exit.
+--version (or -v)
+Print version and exit.
+2.4 Metagenomic assemblies
+The metaquast.py script accepts multiple reference genomes. One can provide several files or directories with multiple reference files inside with -r option. Option -r may be specified multiple times or all references may be specified as a comma-separated list (without spaces!) with a single -r option beforehand. Another way is to use --references-list option.
+
+General usage:
+
+		python metaquast.py contigs_1 contigs_2 ... -r reference_1,reference_2,reference_3,...
+The tool partitions all contigs into groups aligned to each reference genome. Note that a contig may belong to several groups simultaneously if it aligns to several references.
+MetaQUAST runs quast.py for each of the following:
+for all reference genomes in combination (simple concatenation of the FASTA files, we refer to it as "combined reference"),
+for each reference genome separately, by using corresponding group of contigs,
+for the rest of the contigs that were not aligned to any reference genome.
+MetaQUAST uses --ambiguity-usage 'all' when running quast.py on the combined reference until --unique-mapping is specified. For gene prediction (--gene-finding), MetaQUAST uses MetaGeneMark software.
+
+If you run MetaQUAST without providing reference genomes, the tool will try to identify genome content of the metagenome. MetaQUAST uses BLASTN for aligning contigs to SILVA 16S rRNA database, i.e. FASTA file containing small subunit ribosomal RNA sequences. For each assembly, 50 reference genomes with top scores are chosen. Maximum number of references to download can be specified with --max-ref-number.
+
+Reference genomes for the chosen genomes are downloaded from the NCBI database to <quast_output_dir>/quast_downloaded_references/. After that, MetaQUAST runs quast.py on all of them and removes reference genomes with low genome fraction (less than 10%) and proceeds the usual MetaQUAST analysis with the remaining references.
+
+In addition to standard QUAST options, metaquast.py also accepts:
+
+--use-input-ref-order
+Use provided order of references in MetaQUAST summary plots (X-axis). By default, the ordering is based on the best average value of the metric among all assemblies. Note: this option affects only static PDF/PNG/etc plots under <metaquast_output_dir>/summary/. Interactive HTML report has radio button to control the order of references.
+--references-list <path>
+Text file with the list of reference genomes (each one on a separate line). MetaQUAST will search for these references in the NCBI database and will download the found ones. Example of such file is in FAQ section, question Q10.
+--test-no-ref
+Run MetaQUAST on a data from the test_data folder, but without reference genomes. The tool will download SILVA 16S rRNA gene database (170 Mb) and BLAST binaries (55-75 Mb depending on your OS), which will be required if you plan to use MetaQUAST without references. See section 2.4 for details about reference search algorithm.
+--blast-db <path>
+Use custom BLAST database instead of embedded SILVA 16S rRNA database. The path should point either to directory containing .nsq file or to .nsq file itself. See FAQ section, question Q12 for details about creating custom BLAST databases.
+--max-ref-num <int>
+Maximum number of reference genomes (per each assembly) to download after searching in the SILVA database. Default value is 50.
+--unique-mapping
+Force --ambiguity-usage='one' for the combined reference genome ('all' is used by default).
+3. QUAST output
+If an output path is not specified manually (with -o), QUAST generates its output into quast_results/result_<DATE> directory and creates latest symlink to it under quast_results/ directory.
+
+QUAST output contains:
+report.txt	assessment summary in plain text format,
+report.tsv	tab-separated version of the summary, suitable for spreadsheets (Google Docs, Excel, etc),
+report.tex	LaTeX version of the summary,
+icarus.html	Icarus main menu with links to interactive viewers. See section 3.4 for details,
+report.pdf	all other plots combined with all tables (file is created if matplotlib python library is installed),
+report.html	HTML version of the report with interactive plots inside,
+contigs_reports/	(only if a reference genome is provided)
+misassemblies_report	detailed report on misassemblies. See section 3.1.2 for details,
+unaligned_report	detailed report on unaligned and partially unaligned contigs. See section 3.1.3 for details,
+k_mer_stats/	(only if --k-mer-stats option is specified)
+kmers_report	detailed report on k-mer-based metrics,
+reads_stats/	(only if reads are provided)
+reads_report	detailed report on mapped reads statistics.
+
+Note:
+
+metrics based on a reference genome are computed only if a reference is provided (see section 2.3),
+metrics based on genes and operons are computed only if proper annotations are provided (see section 2.3).
+3.1 Metrics description
+3.1.1 Summary report
+# contigs (≥ x bp) is total number of contigs of length ≥ x bp. Not affected by the --min-contig parameter (see section 2.3).
+
+Total length (≥ x bp) is the total number of bases in contigs of length ≥ x bp. Not affected by the --min-contig parameter (see section 2.3).
+
+All remaining metrics are computed for contigs that exceed the threshold specified with --min-contig (see section 2.3, default is 500 bp).
+
+# contigs is the total number of contigs in the assembly.
+
+Largest contig is the length of the longest contig in the assembly.
+
+Total length is the total number of bases in the assembly.
+
+Reference length is the total number of bases in the reference genome.
+
+GC (%) is the total number of G and C nucleotides in the assembly, divided by the total length of the assembly.
+
+Reference GC (%) is the percentage of G and C nucleotides in the reference genome.
+
+N50 is the length for which the collection of all contigs of that length or longer covers at least half an assembly.
+NG50 is the length for which the collection of all contigs of that length or longer covers at least half the reference genome.
+This metric is computed only if the reference genome is provided.
+
+N75 and NG75 are defined similarly to N50 but with 75 % instead of 50 %.
+
+L50 (L75, LG50, LG75) is the number of contigs equal to or longer than N50 (N75, NG50, NG75)
+In other words, L50, for example, is the minimal number of contigs that cover half the assembly.
+
+# misassemblies is the number of positions in the contigs (breakpoints) that satisfy one of the following criteria:
+the left flanking sequence aligns over 1 kbp away from the right flanking sequence on the reference;
+flanking sequences overlap on more than 1 kbp;
+flanking sequences align to different strands or different chromosomes;
+flanking sequences align on different reference genomes (MetaQUAST only).
+This metric requires a reference genome. Note that default threshold of 1 kbp can be changed with --extensive-mis-size. See more details about misassemblies in section 3.1.2. Important note: this metric does not sum up # local misassemblies, # scaffold gap size misassemblies, # structural variations, and # unaligned mis. contigs described below.
+# misassembled contigs is the number of contigs that contain misassembly events (see # misassemblies above).
+
+Misassembled contigs length is the total number of bases in misassembled contigs.
+
+# local misassemblies is the number of positions in the contigs (breakpoints) that satisfy the following conditions:
+
+The gap or overlap between left and right flanking sequences is less than 1 kbp, and larger than the maximum indel length (85 bp).
+The left and right flanking sequences both are on the same strand of the same chromosome of the reference genome.
+Note that default threshold of 1 kbp can be changed with --extensive-mis-size.
+# scaffold gap ext. mis. is the number of positions in the scaffolds (breakpoints) where the flanking sequences are combined in the scaffold on the wrong distance (sufficient for reporting extensive misassembly). The gap between the flanking sequences MUST include at least 10 consecutive N's to be considered as potential # scaffold gap ext. mis.. Max allowed distance inconsistency is controlled by --scaffold-gap-max-size option (default is 10 kbp). Note: these misassemblies are NOT included in the # misassemblies.
+
+# scaffold gap loc. mis. is the number of positions in the scaffolds (breakpoints) where the flanking sequences are combined in the scaffold on the wrong distance (causing a local misassembly). The gap between the flanking sequences MUST include at least 10 consecutive N's to be considered as potential # scaffold gap loc. mis.. Note: these misassemblies are NOT included in the # local misassemblies.
+
+# structural variations is the number of misassemblies matched with structural variations of genome (if reads or BEDPE file with SV are provided, see --reads1/reads2 and --sv-bedpe). Note: these misassemblies are NOT included in the # misassemblies.
+
+# possible TEs is the number of misassemblies possibly caused by transposable elements, i.e. naturally occurring differences between the reference genome and the sequenced organism rather than true assembly errors (computed if --large is specified). Note: these misassemblies are NOT included in the # misassemblies. See Mikheenko et al., 2018 for more details.
+
+# unaligned mis. contigs is the number of contigs that have the number of unaligned bases more than 50% of contig length and at least one misassembly event in their aligned fragment. Such contigs are probably not related to the reference genome, thus their misassemblies may be not real errors but differences between the assembled organism and the reference.
+
+# unaligned contigs is the number of contigs that have no alignment to the reference sequence. The value "X + Y part" means X totally unaligned contigs plus Y partially unaligned contigs. This metric sums up # unaligned mis. contigs described above.
+
+Unaligned length is the total length of all unaligned regions in the assembly (sum of lengths of fully unaligned contigs and unaligned parts of partially unaligned ones). This length does not include uncalled bases (N's) in the assembly.
+
+Genome fraction (%) is the percentage of aligned bases in the reference genome. A base in the reference genome is aligned if there is at least one contig with at least one alignment to this base. Contigs from repetitive regions may map to multiple places, and thus may be counted multiple times (see --ambiguity-usage).
+
+Duplication ratio is the total number of aligned bases in the assembly divided by the total number of aligned bases in the reference genome (see Genome fraction (%) for the 'aligned base' definition). If the assembly contains many contigs that cover the same regions of the reference, its duplication ratio may be much larger than 1. This may occur due to overestimating repeat multiplicities and due to small overlaps between contigs, among other reasons.
+
+# N's per 100 kbp is the average number of uncalled bases (N's) per 100000 assembly bases.
+
+# mismatches per 100 kbp is the average number of mismatches per 100000 aligned bases. True SNPs and sequencing errors are not distinguished and are counted equally.
+
+# indels per 100 kbp is the average number of indels per 100000 aligned bases. Several consecutive single nucleotide indels are counted as one indel.
+
+# genomic features is the number of genomic features (genes, CDS, etc) in the assembly (complete and partial), based on a user-provided list of genomic features positions in the reference genome. A feature is 'partially covered' if the assembly contains at least 100 bp of this feature but not the whole one.
+ 
+This metric is computed only if a reference genome and an annotated list of genomic feature positions are provided (see section 2.3).
+
+# operons is defined similarly to # genomic features, but an operon positions file required instead.
+
+Complete/Partial BUSCO (%) is the percent of BUSCO genes found in the assembly completely (or partially). See the description of --conserved-genes-finding option for details.
+
+# predicted genes is the number of genes in the assembly found by GeneMarkS, GeneMark-ES, MetaGeneMark, or GlimmerHMM. See the description of --gene-finding option for details.
+
+# predicted rRNA genes is the number of ribosomal RNA genes in the assembly found by Barrnap. See the description of --rna-finding option for details.
+
+Total aligned length is the total number of aligned bases in the assembly. A value is usually smaller than a value of total length because some of the contigs may be unaligned or partially unaligned.
+
+Largest alignment is the length of the largest continuous alignment in the assembly. A value can be smaller than a value of largest contig if the largest contig is misassembled or partially unaligned.
+
+NA50, NGA50, NA75, NGA75, LA50, LA75, LGA50, LGA75 ("A" stands for "aligned") are similar to the corresponding metrics without "A", but in this case aligned blocks instead of contigs are considered.
+Aligned blocks are obtained by breaking contigs at misassembly events and removing all unaligned bases.
+
+K-mer-based compl. (%) is the percent of the reference unique k-mers found in the assembly. See the description of --k-mer-stats option and Mikheenko et al., 2018 for more details.
+
+K-mer-based cor. length (%) is the percent of the total length of all contigs considered correct according to the unique k-mers analysis. A contig is considered correct if it has at least one k-mer marker (two or more consequitive unique k-mers shared between the reference and the assembly and having similar relative distances) and does not include a k-mer-based misjoin (see below). See the description of --k-mer-stats option and Mikheenko et al., 2018 for more details.
+
+K-mer-based mis. length (%) is the percent of the total length of all contigs containing at least one k-mer-based misjoin (see below). See the description of --k-mer-stats option and Mikheenko et al., 2018 for more details.
+
+K-mer-based undef. length (%) is the percent of the total length of all contigs without k-mer markers (two or more consequitive unique k-mers shared between the reference and the assembly and having similar relative distances). See the description of --k-mer-stats option and Mikheenko et al., 2018 for more details.
+
+# k-mer-based misjoins is the total number of k-mer-based misjoins in the assembly. A contig contains a k-mer misjoin if it has two k-mer markers related to different reference chromosomes (k-mer-based translocations) or having inconsistency of the contig and reference relative distances on more than 100 kbp (k-mer-based relocations). We define a k-mer marker as a list of two or more consequitive unique k-mers shared between the reference and the assembly and having similar relative distances. See the description of --k-mer-stats option and Mikheenko et al., 2018 for more details.
+
+3.1.2 Misassemblies report
+# misassemblies is the same as # misassemblies from section 3.1.1. However, this report also contains a classification of all misassembly events into three groups: relocations, translocations, and inversions (see below). For metagenomic assemblies, this classification also includes interspecies translocations. We also separately count breakpoints containing scaffold-like gaps (at least 10 consecutive N's) and breakpoints without them. The former are called scaffold misassemblies (relocations, inversions, etc) and the latter are called contig misassemblies (relocations, inversions, etc). See more details in the related github feature request and do not confuse this classification with # scaffold gap ext. (loc.) mis.!
+
+
+Relocation is a misassembly event (breakpoint) where the left flanking sequence aligns over 1 kbp away from the right flanking sequence on the reference genome, or they overlap by more than 1 kbp, and both flanking sequences align on the same chromosome. Note that default threshold of 1 kbp can be changed by --extensive-mis-size.
+
+Translocation is a misassembly event (breakpoint) where the flanking sequences align on different chromosomes.
+
+Interspecies translocation is a misassembly event (breakpoint) where the flanking sequences align on different reference genomes (MetaQUAST only).
+
+Inversion is a misassembly event (breakpoint) where the flanking sequences align on opposite strands of the same chromosome.
+
+# misassembled contigs and misassembled contigs length are the same as the metrics from section 3.1.1 and are counted among all contigs with any type of a misassembly event described above (relocation, translocation, interspecies translocation or inversion).
+
+# possibly misassembled contigs is the number of contigs that contain large unaligned fragment and thus could possibly contain interspecies translocation with unknown reference (MetaQUAST only, combined reference only). Minimal length of the consecutive unaligned fragment (excluding N's) is controlled by --unaligned-part-size, default value is 500 bp.
+
+# possible misassemblies is the number of putative interspecies translocations in possibly misassembled contigs if each large unaligned fragment is supposed to be a fragment of unknown reference (MetaQUAST only, combined reference only).
+
+The next metrics are the same to homonymous metrics from section 3.1.1.
+
+# local misassemblies,
+# scaffold gap ext. mis.,
+# scaffold gap loc. mis.,
+# misassemblies caused by fragmented reference (see --fragmented for details),
+# structural variations,
+# possible TEs,
+# unaligned mis. contigs.
+Note that all these metrics are excluded from # misassemblies and related metrics (e.g., Misassembled contigs length).
+# mismatches is the number of mismatches in all aligned bases.
+
+# indels is the number of indels in all aligned bases. Several consecutive single nucleotide indels are counted as one indel. Note: default maximum length of indel is 85 bp. All indels larger than 85 bp are considered as local misassemblies.
+
+# indels (≤ 5 bp) is the number of indels of length ≤ 5 bp.
+
+# indels (> 5 bp) is the number of indels of length > 5 bp.
+
+Indels length is the total number of bases contained in all indels.
+
+3.1.3 Unaligned report
+# fully unaligned contigs is the number of contigs that have no alignment to the reference sequence.
+
+Fully unaligned length is the total number of bases in all unaligned contigs. Uncalled bases (N's) are not counted.
+
+# partially unaligned contigs is the number of contigs that are not fully unaligned (i.e. have at least one alignment), but have at least one unaligned fragment ≥ the threshold defined by --unaligned-part-size (default value is 500 bp).
+
+Partially unaligned length is the total number of unaligned bases in all partially unaligned contigs. Uncalled bases (N's) are not counted.
+
+# N's is the total number of uncalled bases (N's) in the assembly.
+
+3.2 Plots description
+This section describes PDF and HTML plots. For Icarus interactive contig alignment and size visualization see section 3.4.
+
+Cumulative length plot shows the growth of contig lengths. On the x-axis, contigs are ordered from the largest to smallest. The y-axis gives the size of the x largest contigs in the assembly.
+
+Nx plot shows Nx values as x varies from 0 to 100 %.
+
+NGx plot shows NGx values as x varies from 0 to 100 %.
+
+GC content plot shows the distribution of GC content in the contigs.
+ 
+The x value is the GC percentage (0 to 100 %).
+The y value is the number of non-overlapping 100 bp windows which GC content equals x %.
+ 
+For a single genome, the distribution is typically Gaussian. However, for assemblies with contaminants, the GC distribution appears to be a superposition of Gaussian distributions, giving a plot with multiple peaks.
+
+GC content plot (by contigs) shows the distribution of # contigs with GC percentage in a certain range.
+ 
+The x value is the GC percentage intervals (width is 5 %).
+The y value is the number of contigs which GC content lies in the corresponding interval.
+ 
+These plots are particularly useful for looking at metagenome assemblies, but also a potential good indicator of contamination for single organism assemblies.
+
+Coverage histogram shows distribution of total contig lengths (y-axis) at different read coverage depths (x-axis, grouped in bins). Coverage bin size is automatically selected based on the number of contigs and coverage deviation.
+Note: these histograms are only available for assemblies with SPAdes/Velvet-like contig naming style (..._length_X_cov_Y_...).
+
+Cumulative length plot for aligned contigs shows the growth of lengths of aligned blocks. If a contig has a misassembly event, QUAST breaks it into smaller pieces called aligned blocks.
+ 
+On the x-axis, blocks are ordered from the largest to smallest. The y-axis gives the size of the x largest aligned blocks.
+This plot is created only if a reference genome is provided.
+
+NAx and NGAx plots
+These plots are similar to the Nx and NGx plots but for the NAx and NGAx metrics respectively. These plots are created only if a reference genome is provided.
+
+Genes plot shows the growth rate of full genes in assemblies.
+The y-axis is the number of full genes in the assembly, and the x-axis is the number of contigs in the assembly (from the largest one to the smallest one).
+This plot could be created only if a reference genome and genes annotations files are given.
+
+Operons plot is similar to the previous one but for operons.
+
+Feature-Response Curves (FRCurves)
+Our FRCurves are inspired by AMOS FRCurve definition: Given any such set of features, the response (quality) of the assembler output is then analyzed as a function of the maximum number of possible errors (features) allowed in the contigs. We plot FRCurves as following:  
+The x value (Feature space) is the total maximum number of features in the contigs.
+The y value (Genome coverage %) is the total number of aligned bases in the contigs, divided by the reference length.
+ 
+Note: since some contigs may overlap with other contigs or map to the same regions of the reference (see Duplication ratio), the total number of aligned bases may exceed the reference length and cause Genome coverage % larger than 100%.
+
+FRCurves plots are currently available for # misassemblies (both PDF and interactive HTML formats) and # genomic features/operons (PDF version only). We probably will extend this set in the future.
+
+3.3 MetaQUAST output
+Output for combined reference genome is located inside combined_reference subdirectory of the output directory provided with -o (or in quast_results/latest). An output for each reference genome is placed into separate directory inside <quast_output_dir>/runs_per_reference directory. Also, plots and reports for key metrics are saved under <quast_output_dir>/summary/. Combined HTML report is saved to <quast_output_dir>/report.html.
+
+Metric-level plots
+These plots are created for each key metric to show its values for all assemblies vs all reference genomes. References on the plot are sorted by the mean value of this metric in all assemblies. References are always sorted from the best results to the worst ones, thus the plot can be descending or ascending depend on the metric.
+
+Metric-level reports (TXT, TSV and TEX versions)
+These files contain the same information as the metric-level plots, but in different formats: simple text format, tab-separated format, and LaTeX.
+
+Summary HTML-report
+Summary HTML-report is created on the basis of HTML-report in combined_quast_output/. Each row is expandable and contains data for all reference genomes. You can view results separately for each reference genome by clicking on a row preceded by plus sign:
+
+
+Note that values for some metrics like # contigs may not sum up, because one contig may be aligned to multiple reference genomes.
+
+Krona charts
+Krona pie charts show assemblies and dataset taxonomic profiles. Relative species abundance is calculated based on the total aligned length of contigs aligned to corresponding reference genome. Charts are created for each assembly and one additional chart is created for all assemblies altogether.
+Note: these plots are created only in de novo evaluation mode (MetaQUAST without reference genomes).
+
+3.4 Icarus output
+Icarus generates contig size viewer and one or more contig alignment viewers (if reference genome/genomes are provided). All of them are located in <quast_output_dir>/icarus_viewers/. The links to the viewers and other auxiliary information are provided in Icarus main menu which is saved in <quast_output_dir>/icarus.html. Note that QUAST HTML report also contains a link to Icarus output.
+
+All Icarus viewers contain a legend with color scheme description. For moving and zooming interactive window you can use mouse, Icarus controls (top panel) or keyboard shortcuts (+, -, ←, →, use Shift to speed up the action).
+
+Contig size viewer
+This type of viewer draws contigs ordered from longest to shortest. This ordering is suitable for comparing only largest contigs or number of contigs longer than a specific threshold. The viewer shows N50 and N75 with color and textual indication. If the reference genome is available or at least approximate genome length is known (see --est-ref-size), NG50 and NG75 are also shown. You can also tone down contigs shorter than a specified threshold using Icarus control panel.
+
+Contig alignment viewer
+This type of viewer is available only if a reference genome is provided. For large genomes (≥ 50 Mbp) each chromosome is displayed in a separate viewer. This is also true for multiple reference genomes (see section 2.4).
+The viewer places contigs according to their mapping to the reference genome. The viewer can additionally visualize genes, operons, and read coverage distribution along the genome, if any of those were fed to QUAST.
+
+Note: We recommend to use Icarus in Chrome, however it was tested in other popular web browsers as well (see FAQ, Q9 for the exact list with versions).
+
+4. Adjusting QUAST reports and plots
+You can easily change content, order of metrics, and metric names in all QUAST reports. In order to do this, edit CONFIGURABLE PARAMETERS section in quast_libs/reporting.py. It contains a lot of informative comments, which will help you to adjust QUAST reports easily even if you are new to Python.
+
+You can also adjust plot colors, style and width of lines, legend font, etc. See CONFIGURABLE PARAMETERS section in quast_libs/plotter.py.
+
+Note: if you restart QUAST on the same directory with new parameters, is will reuse existing alignments and run much faster. See the description of -o option in section 2.3.
+
+5. Citation
+
+If you use QUAST v5.* or QUAST-LG features (k-mer-based metrics, upper bound assembly, evaluation of large genomes in general, etc) in your research, please include Mikheenko et al., 2018 into your reference list:
+Alla Mikheenko, Andrey Prjibelski, Vladislav Saveliev, Dmitry Antipov, Alexey Gurevich,
+Versatile genome assembly evaluation with QUAST-LG,
+Bioinformatics (2018) 34 (13): i142-i150. doi: 10.1093/bioinformatics/bty266
+First published online: June 27, 2018
+
+If you use QUAST v4.* or Icarus visualizations in your research, please include Mikheenko et al., 2016 into your reference list:
+Alla Mikheenko, Gleb Valin, Andrey Prjibelski, Vladislav Saveliev, Alexey Gurevich,
+Icarus: visualizer for de novo assembly evaluation,
+Bioinformatics (2016) 32 (21): 3321-3323. doi: 10.1093/bioinformatics/btw379
+First published online: July 4, 2016
+
+If you use QUAST v3.* or MetaQUAST in your research, please include Mikheenko et al., 2016 into your reference list:
+Alla Mikheenko, Vladislav Saveliev, Alexey Gurevich,
+MetaQUAST: evaluation of metagenome assemblies,
+Bioinformatics (2016) 32 (7): 1088-1090. doi: 10.1093/bioinformatics/btv697
+First published online: November 26, 2015
+
+If you use QUAST v1.* or v2.* in your research or want to cite QUAST software in general, please include Gurevich et al., 2013 into your reference list:
+Alexey Gurevich, Vladislav Saveliev, Nikolay Vyahhi and Glenn Tesler,
+QUAST: quality assessment tool for genome assemblies,
+Bioinformatics (2013) 29 (8): 1072-1075. doi: 10.1093/bioinformatics/btt086
+First published online: February 19, 2013
+6. Feedback and bug reports
+We will be thankful if you help us make QUAST better by sending your comments, bug reports, and suggestions to quast.support@cab.spbu.ru or posting them on our GitHub repository tracker (please check that an issue similar to yours is not solved or explained already!).
+
+We kindly ask you to attach the quast.log file from output directory (or an entire archive of the folder) if you have troubles running QUAST.
+
+Note that if you didn't specify the output directory manually, it is going to be automatically set to quast_results/results_<date_time>, with a symbolic link quast_results/latest to that directory.
+
+7. FAQ
+This section contains frequent questions about QUAST. Read answers below for deeper understanding of the results generated by the tool.
+
+For the simplicity of explanation we further refer to the directory containing all results as <quast_output_dir>.
+If you use the command-line version of QUAST you can specify <quast_output_dir> with -o option ("quast_results/latest" if not specified).
+If you use http://quast.bioinf.spbau.ru/ you should download full report by pressing "Download report" button (at the top-right corner), decompress result and go to "full_report" subdirectory.
+
+FAQ Table of Contents
+Q1. It seems that QUAST is giving me a differing number of misassemblies and misassembled contigs. Does this imply that QUAST looks for multiple misassemblies within one contig?
+Q2. Is there a way to get only misassembled contigs of the assembly?
+Q3. Is it possible to find which misassembly corresponds to each contig and which kind of a misassembly event it is?
+Q4. Could you explain the format of Real Alignments in contigs report files (see the answer for Q3)?
+Q5. Where does QUAST save information about SNPs?
+Q6. What does "broken" version of an assembly refer to while assessing scaffolds' quality (--split-scaffolds option)?
+Q7. Can I add new assemblies to existing QUAST report without need to realign already processed assemblies? Or can I at least rerun existing QUAST report with slightly modified options set?
+Q8. Which types of structural variations (SV) are handled by QUAST? Can you give examples of correct BEDPE files for --sv-bedpe option?
+Q9. Which versions of web browsers are suitable for Icarus output?
+Q10. Could you show a sample file suitable for --references-list MetaQUAST option?
+Q11. Sometimes the "# contigs" and the "# contigs ≥ 0 bp" do not agree. Should not these be equal? What is the difference?
+Q12. Can I use custom BLAST database instead of SILVA 16S rRNA for reference searching?
+Q13. Where can I find details about unaligned fragments of my assembly?
+Q14. I have very large assemblies and reference genome but my computational resources are limited. Could you recommend an optimal set of QUAST options to use?
+Q15. I evaluated my assembly using --split-scaffolds option but got counter-intuitive results. The number of misassemblies in "broken" version of the assembly is higher than in the original one while I expected vice versa or at max the similar numbers of misassemblies. Could you explain this?
+Q16. I evaluated multiple assemblies against the reference genome and opened Icarus Contig Alignment Viewer. Color scheme is almost self explanatory but could you explain the meaning of "similar correct contigs" (colored blue) and "similar misassembled blocks" (colored orange)? How do you define the similarity?
+
+Q1. It seems that QUAST is giving me a differing number of misassemblies and misassembled contigs. Does this imply that QUAST looks for multiple misassemblies within one contig?
+
+Yes, you are right, QUAST looks for multiple misassembly events within one contig. Thus, number of misassembled contigs is always less or equal to number of misassemblies.
+
+
+Q2. Is there a way to get only misassembled contigs of the assembly?
+
+Yes, there is such way.
+QUAST copies all misassembled contigs of "<assembly_name>" assembly into <quast_output_dir>/contigs_reports/<assembly_name>.mis_contigs.fa file.
+E.g. if your assembly is "contigs.fasta" then the file is "contigs.mis_contigs.fa", if your assembly is "ecoli_assembly_1.fa.gz" then the file is "ecoli_assembly_1.mis_contigs.fa".
+
+Q3. Is it possible to find which misassembly corresponds to each contig and which kind of a misassembly event it is?
+
+Yes, it is possible. QUAST produces report with detailed info about each contig alignments and the short version with only extensive misassemblies records.
+
+Let's start with the short one. It is saved to <quast_output_dir>/contigs_reports/contigs_report_<assembly_name>.mis_contigs.info. E.g. if your assembly is "contigs.fasta" then the file is "contigs_report_contigs.mis_contigs.info", if your assembly is "ecoli_assembly_1.fasta" then the file is "contigs_report_ecoli_assembly_1.mis_contigs.info".
+The content of this file looks like this:
+
+NODE_601
+Extensive misassembly ( inversion ) between 287 575 and 296 1
+Extensive misassembly ( relocation, inconsistency = 2655 ) between 16800 18907 and 18905 20382
+In this example, we can see that contig named NODE_601 has two extensive misassemblies. The first is an inversion. It occurred between fragments 287 575 and 296 1 (coordinates on the contig). The first fragment (287-575 bp) aligned to the forward strand and the second one (1-296 bp) to the reverse strand (coordinates are descending). The second misassembly is a relocation. It occurred between fragments 16800-18907 and 18905-20382. They aligned to the reference genome with inconsistency of 2655 bp (gap in this case).
+
+
+Let's move to the detailed report. Here you can find information about all misassembled, unaligned and correctly aligned contigs. This report is saved to <quast_output_dir>/contigs_reports/contigs_report_<assembly_name>.stdout file. E.g. if your assembly is "contigs.fasta" then the file is "contigs_report_contigs.stdout", if your assembly is "ecoli_assembly_1.fasta" then the file is "contigs_report_ecoli_assembly_1.mis_contigs.info".
+
+To get info about misassemblies, you should look for "Extensive misassembly" words in the report and look around to detect contig name which corresponds this misassembly.
+
+Look at the following example:
+CONTIG: NODE_772 (575bp)
+Top Length: 296  Top ID: 100.0
+		Skipping redundant alignment 1096745 1096882 | 138 1 | 138 138 | 98.55 | Escherichia_coli NODE_772
+		This contig is misassembled. 3 total aligns.
+				Real Alignment 1: 924846 925134 | 287 575 | 289 289 | 100.0 | Escherichia_coli NODE_772
+						Extensive misassembly ( inversion ) between these two alignments
+				Real Alignment 2: 924906 925201 | 296 1 | 296 296 | 100.0 | Escherichia_coli NODE_772
+In this example, we can see that contig name is NODE_772, its length is 575 bp. This contig has two alignments and one misassembly. Inversion is a type of the misassembly. QUAST also reports relocations and translocations, see section 3.1.2 for details.
+
+Here is another example:
+CONTIG: Contig_753 (140518bp)
+Top Length: 121089  Top ID: 99.98
+		Skipping redundant alignments after choosing the best set of alignments
+		Skipping redundant alignment 273398 273468 | 18977 18907 | 71 71 | 100.0 | Escherichia_coli Contig_753
+		....
+		Skipping redundant alignment 3363797 3363867 | 18977 18907 | 71 71 | 100.0 | Escherichia_coli Contig_753
+		This contig is misassembled. 14 total aligns.
+				Real Alignment 1: 1425621 1426074 | 19431 18978 | 454 454 | 100.0 | Escherichia_coli Contig_753
+						Gap between these two alignments (local misassembly). Inconsistency = 148
+				Real Alignment 2: 1426295 1426818 | 18905 18382 | 524 524 | 100.0 | Escherichia_coli Contig_753
+						Extensive misassembly ( relocation, inconsistency = 2224055 ) between these two alignments
+				Real Alignment 3: 3650278 3650348 | 18977 18907 | 71 71 | 100.0 | Escherichia_coli Contig_753
+						Extensive misassembly ( relocation, inconsistency = 236807 ) between these two alignments
+				Real Alignment 4: 3765544 3886652 | 140518 19430 | 121109 121089 | 99.98 | Escherichia_coli Contig_753
+						Extensive misassembly ( relocation, inconsistency = -1052 ) between these two alignments
+				Real Alignment 5: 3886649 3905037 | 18381 1 | 18389 18381 | 99.96 | Escherichia_coli Contig_753
+This contig is Contigs_753 of length 140518 bp. It has 3 extensive misassemblies (all three are relocations) and one local misassembly.
+
+Q4. Could you explain the format of Real Alignments in contigs report files (see the answer for Q3)?
+
+Yes, sure. Let's look at the following example:
+
+		Real Alignment 1: 19796 20513 | 29511 30228 | 718 718 | 100.0 | ENA|U00096|U00096.2_Escherichia_coli contig-710
+The first two numbers are position in the target sequence (reference genome), and the second two are position in the query sequence (assembled contig). Note that positions on the target are always ascending while positions on the query can be ascending (forward strand) and descending (reverse-complement one).
+
+The next two numbers (in this case: 718 718) mean "the number of aligned bases on the target" and "the number of aligned bases on the query". They are usually equal to each other but they can be slightly different because of short insertions and deletions. Actually, these numbers are excessive because they can be easily calculated based on the first two pairs of numbers (positions on the target and positions on the query). However, sometimes it is convenient to look at these numbers.
+
+The last number (in this case: 100.0) is the aligner quality metric. It is called "identity %" (IDY %) and it describes the quality of the alignment (the number of mismatches and indels between the target and the query). If IDY% = 100.0 then the alignment is perfect, i.e. all bases on the target and on the query are equal to each other. If IDY% is less than 100.0 then the target and the query are slightly different. Quast has a threshold on IDY% which is 95%. Thus we don't use alignments with IDY% less than 95% (they are considered to be relatively bad).
+
+And finally, the last two columns are the name of the target sequence (i.e. reference genome name) and the name of the query (i.e. contig name).
+
+Q5. Where does QUAST save information about SNPs?
+
+The file containing SNP information is saved in <quast_output_dir>/contigs_reports/minimap_output/<assembly_name>.used_snps.gz. We use our own format of ".used_snps" file.
+
+	Escherichia_coli  contig_15  728803  C   .  3217983
+where the columns are: reference genome name, contig name, position on the reference genome, nucleotide in the reference genome, nucleotide in the contig (in this case it is ".", i.e. an absence of a nucleotide in the contig which means a deletion) and the final column is position on the contig.
+
+Q6. What does "broken" version of an assembly refer to while assessing scaffolds' quality (--split-scaffolds option)?
+
+Actually, the difference between "broken" and original assembly (scaffolds) is very simple. QUAST splits input fasta by continuous fragments of N's of length ≥ 10 and call this a "_broken" assembly. By doing this we try to reconstruct "contigs" which were used for construction of the scaffolds. After that, user can compare results for real scaffolds and "reconstructed contigs" and find out whether scaffolding step was useful or not.
+
+If you have both contigs.fasta and scaffolds.fasta it is better to specify both files to QUAST and don't set --split-scaffolds option. The comparison of real contigs vs real scaffolds is more honest and informative than scaffolds vs scaffolds_broken.
+
+To sum up, you should use --split-scaffolds option if you don't have original file with contigs but want to compare your scaffolds with it.
+
+Q7. Can I add new assemblies to existing QUAST report without need to realign already processed assemblies? Or can I at least rerun existing QUAST report with slightly modified options set?
+
+Yes, sure! You just need to specify existing QUAST output directory with -o option. Our tool will reuse already generated alignments and will run alignment process only for new assemblies. Note that all of QUAST options except --min-contig do not affect alignment process, so you can rerun previous QUAST command with modified options and QUAST will reuse existing alignments also.
+
+Hint: if you did not specify QUAST output dir with -o option you can rerun QUAST on the same directory with -o quast_results/latest.
+
+Q8. Which types of structural variations (SV) are handled by QUAST? Can you give examples of correct BEDPE files for --sv-bedpe option?
+
+QUAST can detect and correctly resolve inversions, deletions, and translocations. We also plan to add support for insertions soon.
+
+BEDPE format specification is here. We process first seven columns of the file (chrom1, start1, end1, chrom2, start2, end2, name), the rest are optional and not read by QUAST. Note that columns should be tab-separated!
+Chrom1, start1, end1 define confidence interval around SV start, chrom2, start2, end2 define confidence interval around SV end. Name defines SV type and it should contain 'INV' substring for inversions or 'DEL' for deletions; translocations are automatically identified if chrom1 is not equal to chrom2.
+
+Example of BEDPE line for inversion on positions 1000-1200 of 'E.coli' chromosome (confidence interval is 11 bp long):
+
+		E.coli 995 1010 E.coli 1195 1205 This_is_INVersion The Rest Columns Are Optional
+		
+Example of BEDPE line for deletion of fragment between 1000 and 1200 of 'S.aureus' chromosome:
+		S.aureus 995 1010 S.aureus 1195 1205 DEL
+		
+Example of BEDPE line for translocation from position 500 of 'chr1' chromosome to position 100 of 'chr2' chromosome (confidence interval is different for both ends):
+		chr1 450 550 chr2 100 100 name_does_not_matter_here
+		
+Q9. Which versions of web browsers are suitable for Icarus output?
+
+We recommend to use Icarus in Chrome (tested with v49.0.x), however it also works properly in Safari (tested with v8.0.x) and Firefox (tested with v41.0.x and v45.0.x). Most of the functionality works in Internet Explorer 9 and higher, but we do not recommend this browser due to slow animation.
+Q10. Could you show a sample file suitable for --references-list MetaQUAST option?
+
+The file is just a list of reference names (one per line) to be searched in the NCBI database. Feel free to use spaces or underscores inside these names. Correct and working example is below:
+
+
+				Lactobacillus_plantarum
+				Lactobacillus  reuteri DSM 20016
+				Lactobacillus_psittaci
+				Harry Potter
+		
+Note that the first three references should normally be found, downloaded and used for your assemblies evaluation. At the same time you will be notified that Harry Potter reference genome is not found in the NCBI database yet.
+Q11. Sometimes the "# contigs" and the "# contigs ≥ 0 bp" do not agree. Should not these be equal? What is the difference?
+
+# contigs reports number of contigs above specified threshold. Default threshold is 500 bp and it can be changed with --min-contig option. Most of the other statistics are also based on all contigs larger than this threshold (we actually remove all shorts contigs in the beginning of the pipeline). For example, # misassemblies is essentially # misassemblies in contigs ≥ min-contig threshold.
+However, all metrics containing length specification in parenthesis are not affected by --min-contig! For example, # contigs ≥ 0 bp is the number of contigs before the filtration.
+The value of the threshold is written in the very first line of the text report (like "All statistics are based on contigs of size ≥ 500 bp, unless otherwise noted" ). It is also present in the header section of HTML report and on the bottom of PDF report.
+
+To sum up, by default, # contigs is the same to # contigs >= 500 bp, so there will be difference between # contigs and # contigs ≥ 0 bp if your assembly has contigs shorter than 500 bp.
+
+Q12. Can I use custom BLAST database instead of SILVA 16S rRNA for reference searching?
+
+Yes. If you want to blast your contigs against a local BLAST database, you can specify path to the database with --blast-db option.
+To create a BLAST database, you need makeblastdb from BLAST+ package. You can also use makeblastdb from <quast_installation_dir>/blast/ or ~/.quast/blast/ (depending on your installation). MetaQUAST automatically creates this directory and downloads the binary into it when you run full QUAST installation or metaquast.py without reference for the first time.
+You can create a BLAST database from your FASTA file by running makeblastdb -in <path_to_fasta_file> -dbtype nucl. If you have multiple FASTA files, you should concatenate them into one.
+
+Note: MetaQUAST will try to search references in the NCBI database based on headers from your FASTA file. Ensure that the headers contain species names in simple parsable format without spaces, for example:
+
+				>Escherichia_coli, complete genome
+				>NZ_CP015308.1|Lactobacillus_plantarum_strain_LY-78, complete genome
+		
+Q13. Where can I find details about unaligned fragments of my assembly?
+
+Starting from v.4.4, we have added detailed reports with this information. These reports are generated for all assemblies and saved to <quast_output_dir>/contigs_reports/contigs_report_<assembly_name>.unaligned.info. E.g. if your assembly is "contigs.fasta" then the file is "contigs_report_contigs.unaligned.info", if your assembly is "ecoli_assembly_1.fasta" then the file is "contigs_report_ecoli_assembly_1.unaligned.info".
+
+The report include all fully unaligned and partially unaligned contigs, i.e. contigs that have at least one unaligned fragment ≥ 500 bp. This is the default threshold and it can be changed with --unaligned-part-size option. The following values are reported for each contig:
+
+contig name,
+total length,
+unaligned length (it is equal to total length for fully unaligned contigs),
+type (full or partial),
+list of all unaligned fragments.
+Q14. I have very large assemblies and reference genome but my computational resources are limited. Could you recommend an optimal set of QUAST options to use?
+
+Current QUAST version is not optimised for large genomes yet. However, we have some useful suggestions. You may be interested in adding the following options to your command line to reduce RAM consumption, disk space usage, and running time. Note that each of them have some negative effect, so you should choose what is more important for you and may be try them one by one until you find the optimal set for your particular case.
+
+for less memory (RAM): --memory-efficient (drawback: increased running time); set lower number of threads (-t, drawback: increased running time),
+for less disk space usage: --space-efficient (drawback: removed aux files with some details for advanced analysis),
+for less running time: --fast (drawback: missed plots, HTML reports, some metrics); set greater number of threads (-t, drawback: increased memory consumption)
+for all above: --no-snps (drawback: missed SNP-related metrics in reports); set greater minimal contig length threshold (--min-contig, drawback: not analysed short contigs); set greater minimal alignment length and quality thresholds (--min-alignment and --min-identity respectively, drawback: not analysed contigs with relatively bad alignments)
+Q15. I evaluated my assembly using --split-scaffolds option but got counter-intuitive results. The number of misassemblies in "broken" version of the assembly is higher than in the original one while I expected vice versa or at max the similar numbers of misassemblies. Could you explain this?
+
+You are absolutely right that normally a broken version of an assembly should have smaller (or the same) number of misassemblies comparing to the scaffolded version. Scaffolding is an additional step and it could introduce new errors by connecting not related contigs into a single scaffold. At the same time it could not fix misassemblies already present in contigs. Thus, the number of misassemblies may only increase in comparing to contigs, i.e. the broken version.
+
+However, your case is probably a little bit more complicated. If your reference genome is not very close to the sequenced organism, you usually get many partially unaligned contigs (scaffolds). If such scaffold has more than 50% of unaligned bases, its misassemblies are excluded from # misassemblies as untrustworthy ones and counted in # unaligned mis. contigs metric. At the same time, the broken version may include this scaffold as a set of short contigs split by continues fragments of N's. Some of these contings may be fully unaligned while some of them may be considered as normal (less than 50% is unaligned). The misassemblies in normal contigs will be counted in # misassemblies.
+
+To sum up, please take a look at # unaligned mis. contigs values. We suggest that the number of such contigs is higher for the scaffolded version and this is the probable source of the higher number of misassemblies in the broken assembly. You may also be interested in Icarus visualization where all unaligned mis. contigs are highlighted with grey-red color.
+
+Q16. I evaluated multiple assemblies against the reference genome and opened Icarus Contig Alignment Viewer. Color scheme is almost self explanatory but could you explain the meaning of "similar correct contigs" (colored blue) and "similar misassembled blocks" (colored orange)? How do you define the similarity?
+
+The algorithm is described in details in Icarus paper (see Supplementary Material, Section 1.2). The brief definition is below.
+
+Two blocks are considered "similar" if they satisfy the following conditions altogether:
+
+have the same type (both are correct contigs or both are fragments of misassembled contigs),
+are relatively large (length ≥ L),
+their alignments to the reference are close to each other (both start and end coordinates have difference within a small δ).
+The default value for δ is 5% of the largest block in the pair, the default value for L is 10 kbp.
+
+Please have a look at the example figure below.
+
+Blocks A and B meet all requirements and are marked similar. Blocks C and D are not marked similar because their starting positions are too distant. Blocks E and F are too short to be marked similar. Blocks G and H have different type, and thus not marked similar.
+
+Go to FAQ Table of Contents
+
+Go to the top

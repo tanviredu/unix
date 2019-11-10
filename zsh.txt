@@ -1,0 +1,21 @@
+# install oh-my-zsh:
+
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+
+or
+
+sh -c "$(wget -O- https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+
+# set default shell:
+
+chsh -s /bin/bash
+chsh -s /bin/zsh
+
+# update oh-my-zsh
+
+upgrade_oh_my_zsh
+
+#uninstall oh-my-zsh
+
+uninstall_oh_my_zsh
+

@@ -1,0 +1,3 @@
+sudo /Applications/balenaEtcher.app/Contents/MacOS/balenaEtcher
+
+sudo /Applications/Etcher.app/Contents/MacOS/balenaEtcher

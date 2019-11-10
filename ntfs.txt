@@ -1,0 +1,17 @@
+# if ntfs formated external hard disk do not support by linux(ubuntu)
+
+# First create a directory where u want to mount it.
+
+sudo mkdir /media/windows
+
+# Now you have to find which partition is the NTFS one by using:
+
+sudo fdisk -l
+
+# If your NTFS partition is for example /dev/sdb1 to mount it use:
+
+sudo mount -t ntfs -o nls=utf8,umask=0222 /dev/sdb1 /media/windows
+
+# To unmount simply do:
+
+sudo umount /media/windows

@@ -1,0 +1,3 @@
+abyss-pe k=32 name=aliivibrio in='read1.fastq read2.fastq'
+
+alias abyss-fastq='abyss-pe in='read1.fastq read2.fastq'

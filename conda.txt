@@ -1,0 +1,60 @@
+# Download and install miniconda
+
+# For linux:
+
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+sh Miniconda3-latest-Linux-x86_64.sh
+
+# For mac:
+
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+sh Miniconda3-latest-MacOSX-x86_64.sh
+
+# Download bioconda packages:
+
+conda install -c bioconda abyss
+conda install -c bioconda bwa
+conda install -c bioconda bcftools
+conda install -c bioconda htslib
+conda install -c bioconda samtools
+conda install -c bioconda gatk4
+conda install -c bioconda maker
+conda install -c bioconda mummer
+conda install -c bioconda soapdenovo2
+conda install -c bioconda quast
+conda install -c bioconda busco
+conda install -c bioconda fastp
+conda install -c bioconda fastqc
+conda install -c bioconda trimmomatic
+conda install -c bioconda repeatmasker
+conda install -c bioconda maker
+
+
+# if you install soapdenovo2. don't install samtools or uninstall samtools before installing soapdenovo2. because a specific version of samtools is required for soapdenovo2.
+
+# Conda channel management:
+
+conda config --add channels new_channel
+
+# Example:
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --add channels r
+
+# Conda env management:
+
+conda create --name env_name #to create conda env
+conda activate env_name #to activate conda env
+conda deactivate #to deactivate current env
+conda env remove -n env_name #to delete conda env
+
+# Download anaconda-navigator (optional)
+
+conda install -c anaconda anaconda-navigator
+conda install -c anaconda glueviz
+conda install -c anaconda jupyterlab
+conda install -c anaconda notebook
+conda install -c anaconda orange3
+conda install -c anaconda rstudio
+conda install -c anaconda spyder

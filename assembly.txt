@@ -1,0 +1,107 @@
+# STEP 1: 
+
+USE THE BWA TO MAKE BAM/SAM FILE
+IF BWA IS ON YOUR SYSTEM THEN, TYPE IN THIS CODES
+
+bwa index ref.fa
+bwa mem ref.fa read1.fq read2.fq > aln-pe.sam 
+
+AFTER INDEXING THERE WILL BE 5 DIFFERENT FILES. SOME OF THEM ARE BINARY FILE. BWA MAKES THEM FOR ITS OWN USE. THEN THE SECOND CODE IS USED TO CHECK mem. MEM MEANS MAXIMUM EXECT MATCH. MEM IS USED TO PERFORM ALIGNMENT. AFTER SUCCESSFUL ALIGNMENT SOMEONE WILL SEE A SAM FILE. PLEASE GO THROUGH GOOGLE TO UNDERSTAND SAM FILE FORMAT.
+
+VISIT THIS SITE TO LEARN MORE : http://bio-bwa.sourceforge.net/bwa.shtml
+ABOUT BWA.
+
+
+
+STEP 2: 
+
+MAKE INDEX NAMED DIRECTORY. TO DO SO , PLEASE OPEN TERMINAL AT YOUR WORK DIRECTORY THEN OPEN TERMINAL AND TYPE 
+ 
+mkdir index
+
+AFTER THIS IN WORK DIRECTORY THERE WILL BE AN INDEX NAMED FOLDER.
+
+
+
+STEP 3: 
+
+BWA INDEX OF REFERENCE FILE. TO DO SO, PLEASE OPEN TERMINAL AND TYPE
+
+bwa index -p index/ref -a is ref.fa
+
+
+STEP 4: 
+
+SAMTOOLS faidx OF THE REFERENCE FASTA. TO DO SO, OPEN TERMINAL AND TYPE
+
+samtools faidx ref.fa
+
+
+STEP 5: 
+
+USE GATK TO MAKE  ref.dict  AND mt.bam. TO DO SO , OPEN TERMINAL AND TYPE
+
+~/mbillah/tools/gatk-4.1.0.0/gatk CreateSequenceDictionary -R ref.fa -O ref.dict
+bwa mem -t 2 -M -R '@RG\tID:1\tLB:1\tPL:ILLUMINA\tSM:mt' index/ref mt_1.fq mt_2.fq | samtools view -b -S -o mt.bam
+
+PLEASE REMEMBER HERE THE VERY FIRST CODES….. ~/mbillah/tools/gatk-4.1.0.0/gatk   MEANS SIMPLE THE PATH WHERE YOUR GATK IS INSTALLED/EXIST. 
+
+
+STEP 6: 
+
+USE GATK TO MAKE mt.sorted.bam . TO DO SO, OPEN TERMINAL AND TYPE
+
+~/mbillah/tools/gatk-4.1.0.0/gatk --java-options "-Xmx1G" SortSam -I mt.bam -O mt.sorted.bam -SO coordinate --CREATE_INDEX true
+
+PLEASE HERE THE VERY FIRST STRINGS OF THE CODES …….
+~/mbillah/tools/gatk-4.1.0.0/gatk   MEANS SIMPLE THE PATH WHERE YOUR GATK IS INSTALLED/EXIST. 
+
+
+
+
+
+STEP 7:
+
+USE GATK TO MAKE mt.dedup.bam . TO DO SO, OPEN TERMINAL AND TYPE
+
+~/mbillah/tools/gatk-4.1.0.0/gatk --java-options "-Xmx1G" MarkDuplicates -I mt.sorted.bam -O mt.dedup.bam -M mt.metrics --REMOVE_DUPLICATES true --CREATE_INDEX true
+
+
+PLEASE HERE THE VERY FIRST STRINGS OF THE CODES …….
+~/mbillah/tools/gatk-4.1.0.0/gatk   MEANS SIMPLE THE PATH WHERE YOUR GATK IS INSTALLED/EXIST. 
+
+
+STEP 8: 
+
+USE GATK TO MAKE gatk4.raw.vcf . TO DO SO, OPEN TERMINAL AND TYPE
+
+~/mbillah/tools/gatk-4.1.0.0/gatk --java-options "-Xmx1G" HaplotypeCaller -R ref.fa -I mt.dedup.bam -O gatk4.raw.vcf
+
+PLEASE HERE THE VERY FIRST STRINGS OF THE CODES …….
+~/mbillah/tools/gatk-4.1.0.0/gatk   MEANS SIMPLE THE PATH WHERE YOUR GATK IS INSTALLED/EXIST.
+
+STEP 9: 
+
+USE ABYSS TO MAKE CONTIG FILES. TO DO SO, OPEN TERMINAL AND TYPE
+
+abyss-pe k=64 name=ecoli in='reads1.fa reads2.fa'
+
+YOU ARE FREE TO PUT ANY NAME INSTEAD OF ECOLI. THIS WILL MAKE A LOTS OF FILE 
+LIKE  contig.fasta file will create.
+
+
+
+STEP 10: 
+
+IF MUMMER IS INSTALLED ONLY THEN YOU CAN MOVE TO THIS PART. OK, USE ABACAS TO MAKE SCAFOLLDS FROM CONTIGS.please save the abacas file in the workplace. Then, PLEASE TYPE 
+
+perl abacas.pl -r ref.fa -q contig.fa -p nucmer
+
+THEN YOU WILL SEE 
+IF THIS FILES EXIST IN YOUR WORK DIRECTORY THAT MEANS YOUR SCAFFOLDS ARE READY. HERE THE   ECOLI-SCAFFOLDS.FA 
+IS YOUR SCAFFOLD.
+
+
+
+
+

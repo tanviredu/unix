@@ -1,0 +1,4 @@
+#google cloud tutorial
+
+#Change your root password first
+sudo passwd

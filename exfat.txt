@@ -1,0 +1,5 @@
+# if exfat formated external hard disk do not support by linux(ubuntu)
+
+sudo add-apt-repository universe
+sudo apt update
+sudo apt install exfat-fuse exfat-utils
