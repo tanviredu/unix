@@ -1,3 +1,3 @@
-# text
+# unix
 
-All text files helped me on my work
+UNIX tips and tricks.
