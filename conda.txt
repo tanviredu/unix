@@ -13,7 +13,7 @@ sh Miniconda3-latest-MacOSX-x86_64.sh
 # Python environment
 
 conda create --name py2 python=2.7
-conda create --name py3 python=3.5
+conda create --name py3 python=3.7
 
 conda activate py2
 conda deactivate
