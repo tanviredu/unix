@@ -1,47 +1,59 @@
 # Download and install miniconda
 
-# For linux:
 
+
+# For linux:
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-sh Miniconda3-latest-Linux-x86_64.sh
+sh Miniconda3-latest-Linux-x86_64.sh -b -f -p
+
+
 
 # For mac:
-
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-sh Miniconda3-latest-MacOSX-x86_64.sh
+sh Miniconda3-latest-MacOSX-x86_64.sh -b -f -p
+
+
+
+echo "export PATH=~/miniconda3/bin:$PATH" >> .bashrc
+echo "export PATH=~/miniconda3/bin:$PATH" >> .bash_profile
+echo "export PATH=~/miniconda3/bin:$PATH" >> .zshrc
+
+
 
 # Python environment
+conda create --name py2 python=2.7 -y
+conda create --name py3 python=3.7 -y
 
-conda create --name py2 python=2.7
-conda create --name py3 python=3.7
+
 
 conda activate py2
 conda deactivate
 
+
+
 conda activate py3
 conda deactivate
 
+
+
 # Download bioconda packages:
+conda install -c bioconda abyss -y
+conda install -c bioconda bwa -y
+conda install -c bioconda bcftools -y
+conda install -c bioconda htslib -y
+conda install -c bioconda samtools -y
+conda install -c bioconda gatk4 -y
+conda install -c bioconda maker -y
+conda install -c bioconda mummer -y
+conda install -c bioconda soapdenovo2 -y
+conda install -c bioconda quast -y
+conda install -c bioconda busco -y
+conda install -c bioconda fastp -y
+conda install -c bioconda fastqc -y
+conda install -c bioconda trimmomatic -y
+conda install -c bioconda repeatmasker -y
+conda install -c bioconda maker -y
 
-conda install -c bioconda abyss
-conda install -c bioconda bwa
-conda install -c bioconda bcftools
-conda install -c bioconda htslib
-conda install -c bioconda samtools
-conda install -c bioconda gatk4
-conda install -c bioconda maker
-conda install -c bioconda mummer
-conda install -c bioconda soapdenovo2
-conda install -c bioconda quast
-conda install -c bioconda busco
-conda install -c bioconda fastp
-conda install -c bioconda fastqc
-conda install -c bioconda trimmomatic
-conda install -c bioconda repeatmasker
-conda install -c bioconda maker
-
-
-# if you install soapdenovo2. don't install samtools or uninstall samtools before installing soapdenovo2. because a specific version of samtools is required for soapdenovo2.
 
 # Conda channel management:
 
@@ -62,10 +74,10 @@ conda env remove -n env_name #to delete conda env
 
 # Download anaconda-navigator (optional)
 
-conda install -c anaconda anaconda-navigator
-conda install -c anaconda glueviz
-conda install -c anaconda jupyterlab
-conda install -c anaconda notebook
-conda install -c anaconda orange3
-conda install -c anaconda rstudio
-conda install -c anaconda spyder
+conda install -c anaconda anaconda-navigator -y
+conda install -c anaconda glueviz -y
+conda install -c anaconda jupyterlab -y
+conda install -c anaconda notebook -y
+conda install -c anaconda orange3 -y
+conda install -c anaconda rstudio -y
+conda install -c anaconda spyder -y

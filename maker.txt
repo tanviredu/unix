@@ -13,9 +13,9 @@ conda install -y -c bioconda maker
 
 conda deactivate
 
-#on linux:
+on linux:
 conda create --name maker python=2.7
-source activate maker
+conda activate maker
 conda update --all -y
 conda config --add channels conda-forge
 conda config --add channels bioconda
@@ -23,4 +23,5 @@ conda config --add channels r
 conda config --set show_channel_urls yes
 conda install -y -c bioconda maker
 conda clean --all -y
-source deactivate
+conda deactivate
+history -c
