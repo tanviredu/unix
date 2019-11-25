@@ -19,3 +19,5 @@ upgrade_oh_my_zsh
 
 uninstall_oh_my_zsh
 
+#save history to oh-my-zsh
+HISTFILE=${ZDOTDIR:-$HOME}/.oh-my-zsh/.zsh_history
