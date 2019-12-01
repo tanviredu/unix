@@ -52,7 +52,7 @@ conda install -c bioconda fastp -y
 conda install -c bioconda fastqc -y
 conda install -c bioconda trimmomatic -y
 conda install -c bioconda repeatmasker -y
-conda install -c bioconda maker -y
+
 
 
 # Conda channel management:
