@@ -1,0 +1,60 @@
+vi			=	open vim
+vi file		=	open file on vim
+
+ZZ			=	exit vim
+:exit		=	exit vim
+:x			=	exit vim
+:quit		=	exit vim
+:q			=	exit vim
+:wq			=	exit vim and write changes
+
+control j	=	zoom out
+control k	=	zoom in
+
+h			=	mode left
+j			=	move down
+k			=	move up
+l			=	move right
+
+i			=	insert mode for edit
+v			=	visual mode for selection
+esc			=	exit mode
+esc esc		=	exit mode instantly
+
+gg			=	go to first line
+G			=	go to last line
+2G			=	go to 2nd line
+3G			=	go to 3rd line
+
+0			=	go to first character of line
+
+x			=	delete character
+2x			=	delete 2 character
+3x			=	delete 3 character
+
+dw			=	delete word
+2dw			=	delete 2 word
+3dw			=	delete 3 word
+
+dd			=	delete line
+2dd			=	delete 2 line
+3dd			=	delete 3 line
+
+p			=	put deleted objects
+r			=	replace the object
+
+c			=	delete and change the object
+ce			=	delete and change the word
+c$			=	delete and change the line
+
+u			=	undo
+2u			=	undo last 2 do
+3u			=	undo last 3 do
+
+w			=	go forward to biginning of next word
+e			=	go forward to ending of next word
+b			=	go reverse to biginning of previous word
+
+3w			=	go forward to biginning of 3rd word
+3e			=	go forward to ending of 3rd word
+3b			=	go reverse to biginning of 3rd previous word
